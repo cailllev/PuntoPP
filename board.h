@@ -5,10 +5,19 @@
 #include "player.h"
 
 
-struct Point
-{
+struct Point{
     int x, y;
     Point(int x_, int y_) : x(x_), y(y_) {};
+};
+
+struct Borders {
+    int ob_x_min, ob_x_max, ob_y_min, ob_y_max; // outer borders
+    int ib_x_min, ib_x_max, ib_y_min, ib_y_max; // inner borders
+    Borders(
+        int ob_x_min_, int ob_x_max_, int ob_y_min_, int ob_y_max_, 
+        int ib_x_min_, int ib_x_max_, int ib_y_min_, int ib_y_max_) : 
+            ob_x_min(ob_x_min_), ob_x_max(ob_x_max_), ob_y_min(ob_y_min_), ob_y_max(ob_y_max_),
+            ib_x_min(ib_x_min_), ib_x_max(ib_x_max_), ib_y_min(ib_y_min_), ib_y_max(ib_y_max_) {};
 };
 
 
@@ -22,12 +31,11 @@ class Board {
         static Card * const null_card;     // const pointer
         static Player * const null_player; // const pointer
 
-
-
         Board();
         Card* get_card(int x, int y);
         std::list<Point*> get_valid_plays(Card *c);
         bool is_valid_play(Card *c, int x, int y);
+        Borders* get_borders();
         void update_borders(int x, int y);
         bool play_card(Card *c, int x, int y);
         void play_card_no_checks(Card *c, int x, int y);

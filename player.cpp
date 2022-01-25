@@ -1,36 +1,71 @@
+#include <random>
 #include <string>
-#include "player.h"
 #include "card.h"
+#include "console.h"
+#include "player.h"
 
 
 Player::Player(int id, std::string name) {
     player_id = id;
-    player_name = name;
+    player_name = name;  
 
-    // create array of cards (1, 1, 2, 2, 3, 3, ...)
-    for (int i = Card::min_val; i <= Card::max_val; i += 1) {
-        this->cards.push_back(Card(this->player_id, i));
-        this->cards.push_back(Card(this->player_id, i));
+    /*
+    std::random_device rand_dev;
+    std::mt19937 generator(rand_dev());
+    */
+
+    // create a shuffled list of cards (1, 1, 2, 2, 3, 3, ...)
+    for (int j = 0; j < 2; j ++) {
+        for (int i = Card::min_val; i <= Card::max_val; ) {
+            /*
+            // create random position for new card
+            std::uniform_int_distribution<int> distr(0, i + j*Card::max_val + 1);
+            int pos = distr(generator);
+
+            // create and advance iterator to position
+            std::list<Card*>::iterator it = this->cards.begin();
+            advance(it, pos);
+
+            this->cards.insert(it, new Card(this->player_id, i));
+            */
+            this->cards.push_back(new Card(this->player_id, i));
+        }
     }
 }
 
-int Player::get_id() { return this->player_id; }
-std::string Player::get_name() { return this->player_name; }
-Card* Player::peek_next_card() { return &(this->cards.front()); }
+int Player::get_id() { 
+    return this->player_id; 
+}
 
-Card* Player::get_next_card() {
-    Card* c = &(this->cards.front());
+std::string Player::get_name() { 
+    return this->player_name; 
+}
+
+Card * Player::peek_next_card() { 
+    return this->cards.front(); 
+}
+
+Card * Player::get_next_card() {
+    Card *c = this->cards.front();
     this->cards.pop_front();
     return c;
 }
 
-Card* Player::get_avg_draw() {
-            int idx = this->cards.size();
-            std::list<Card>::iterator it = this->cards.begin();
-            std:advance(it, idx);
-            return &(*it);
+// returns average card drawn
+// TODO, implement top 66% / top x% draw
+Card * Player::get_avg_draw() {
+    int sum = 0;
+    for (auto& card : this->cards) {
+        sum += card->get_value();
+    }
+    return new Card(this->player_id, (int) (sum / this->cards.size()));
 }
 
-// std::list<Card> Player::get_remaining_cards() {}
-int Player::get_cards_count() { return this->cards.size(); }
+int Player::get_cards_count() { 
+    return this->cards.size();
+}
 
+std::string Player::print() {
+    return to_colour[this->player_id](this->player_name) + " with a " 
+        + to_colour[this->player_id](std::to_string(this->peek_next_card()->get_value()));
+}

@@ -8,7 +8,7 @@ class Player {
     private:
         int player_id;
         std::string player_name;
-        std::list<Card> cards;
+        std::list<Card*> cards;
 
     public:
         Player(int id, std::string name);
@@ -18,8 +18,8 @@ class Player {
         Card* get_next_card();
         Card* peek_next_card();
         Card* get_avg_draw();
-        std::list<Card> get_remaining_cards();
         int get_cards_count();
+        std::string print();
 };
 
 #endif

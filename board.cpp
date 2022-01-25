@@ -3,6 +3,7 @@
 #include "board.h"
 #include "card.h"
 #include "console.h"
+#include <iostream>
 
 Card * const Board::null_card = new Card(0, 0);
 Player * const Board::null_player = new Player(0, "");
@@ -23,8 +24,8 @@ Board::Board() {
     this->ob_y_min = 0;
     this->ob_y_max = this->max_y;
     this->ib_x_min = this->x_mid - 1;
-    this->ib_x_max = this->x_mid - 1;
-    this->ib_y_min = this->y_mid + 1;
+    this->ib_x_max = this->x_mid + 1;
+    this->ib_y_min = this->y_mid - 1;
     this->ib_y_max = this->y_mid + 1;
 }
 
@@ -32,27 +33,45 @@ Card * Board::get_card(int x, int y) {
     return this->spots[y][x];
 }
 
+// TODO: optimize to int, int instead of Point?
 std::list<Point*> Board::get_valid_plays(Card *c) {
     std::list<Point*> plays = std::list<Point*>();
     for (int y = this->ib_y_min; y <= this->ib_y_max; y++) {
         for (int x = this->ib_x_min; x <= this->ib_x_max; x++) {
-            Point *p = new Point(x, y);
             if (Board::is_valid_play(c, x, y))
-                plays.push_back(p);
+                plays.push_back(new Point(x, y));
         }
     }
     return plays;
 }
 
+Borders* Board::get_borders() {
+    return new Borders(
+        this->ob_x_min, this->ob_x_max, this->ob_y_min, this->ob_y_max,
+        this->ib_x_min, this->ib_x_max, this->ib_y_min, this->ib_y_max
+    );
+}
+
+// current sizes (11 and 6) let the "outer border" automatically shrink 
+// when card is played on the "inner border" and expand "inner border" when placed on it
+void Board::update_borders(int x, int y) {
+    if      (x == this->ib_x_min) {this->ob_x_max = x - 1 + this->max_size; this->ib_x_min -= 1;}
+    else if (x == this->ib_x_max) {this->ob_x_min = x + 1 - this->max_size; this->ib_x_max += 1;}
+    if      (y == this->ib_y_min) {this->ob_y_max = y - 1 + this->max_size; this->ib_y_min -= 1;}
+    else if (y == this->ib_y_max) {this->ob_y_min = y + 1 - this->max_size; this->ib_y_max += 1;}
+}
+
 bool Board::is_valid_play(Card *c, int x, int y) {
 
     // new card must be bigger then old card
-    if (c->get_value() <= (this->spots[y][x])->get_value())
+    if (c->get_value() <= (this->spots[y][x])->get_value()) {
         return false;
+    }
 
     // new card must be in inner border
-    if (x < this->ib_x_min || x > this->ib_x_max || y < this->ib_y_min || y < this->ib_y_max)
+    if (x < this->ib_x_min || x > this->ib_x_max || y < this->ib_y_min || y > this->ib_y_max) {
         return false;
+    }
 
     // check if any cards are adjacent
     int x_minus = 0 ? x == 0 : 1;
@@ -68,15 +87,6 @@ bool Board::is_valid_play(Card *c, int x, int y) {
         }
     }
     return false;
-}
-
-// current sizes (11 and 6) let the "outer border" automatically shrink 
-// when card is played on the "inner border" and expand "inner border" when placed on it
-void Board::update_borders(int x, int y) {
-    if      (x == this->ib_x_min) {this->ob_x_max = x - 1 + this->max_size; this->ib_x_min -= 1;}
-    else if (x == this->ib_x_max) {this->ob_x_min = x + 1 - this->max_size; this->ib_x_max += 1;}
-    if      (y == this->ib_y_min) {this->ob_y_max = y - 1 + this->max_size; this->ib_y_min -= 1;}
-    else if (y == this->ib_y_max) {this->ob_y_min = y + 1 - this->max_size; this->ib_y_max += 1;}
 }
 
 // checks if card to play is valid, then places it and updates borders

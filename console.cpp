@@ -1,5 +1,6 @@
 #include "console.h"
 
+
 std::string RESET = "\033[0m";
 
 std::string black(std::string t) {return "\033[30;1m" + t + RESET;}
