@@ -1,6 +1,5 @@
-#include <array>
-#include "console.h"
 #include "card.h"
+#include "console.h"
 
 Card::Card(int p_id, int val) : player_id(p_id), value(val) {};
 

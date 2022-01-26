@@ -1,20 +1,13 @@
-#include <string>
-#include <list>
 #include "board.h"
-#include "card.h"
 #include "console.h"
 #include <iostream>
 
-Card * const Board::null_card = new Card(0, 0);
-Player * const Board::null_player = new Player(0, "");
-
 Board::Board() {
-
     // init all spots with null cards
-    this->spots[max_y][max_x] = {};
+    this->spots[max_y][max_x];
     for (int y = 0; y < this->max_y; y++) {
         for (int x = 0; x < this->max_x; x++) {
-            this->spots[y][x] = Board::null_card;
+            this->spots[y][x] = this->null_card;
         }
     }
 
@@ -29,11 +22,23 @@ Board::Board() {
     this->ib_y_max = this->y_mid + 1;
 }
 
+Board::~Board() {
+    for (int y = 0; y < this->max_y; y++) {
+        for (int x = 0; x < this->max_x; x++) {
+            delete this->spots[y][x]; // delete card
+        }
+    }
+    // spots array is allocated automatically, not needed to delete manually
+    // https://stackoverflow.com/questions/14513535/warning-deleting-array-in-load-file-function
+    delete this->null_card;
+}
+
 Card * Board::get_card(int x, int y) {
     return this->spots[y][x];
 }
 
-// TODO: optimize to int, int instead of Point?
+/*
+// TODO: optimize to (int, int) instead of Point?
 std::list<Point*> Board::get_valid_plays(Card *c) {
     std::list<Point*> plays = std::list<Point*>();
     for (int y = this->ib_y_min; y <= this->ib_y_max; y++) {
@@ -43,6 +48,11 @@ std::list<Point*> Board::get_valid_plays(Card *c) {
         }
     }
     return plays;
+}
+*/
+
+Point * Board::get_mid() {
+    return new Point(this->x_mid, this->y_mid);
 }
 
 Borders* Board::get_borders() {
@@ -91,8 +101,8 @@ bool Board::is_valid_play(Card *c, int x, int y) {
 
 // checks if card to play is valid, then places it and updates borders
 bool Board::play_card(Card *c, int x, int y) {
-    if (Board::is_valid_play(c, x, y)) {
-        Board::play_card_no_checks(c, x, y);
+    if (this->is_valid_play(c, x, y)) {
+        this->play_card_no_checks(c, x, y);
         return true;
     }
     return false;
@@ -100,7 +110,6 @@ bool Board::play_card(Card *c, int x, int y) {
 
 // places a card and updates borders
 void Board::play_card_no_checks(Card *c, int x, int y) {
-    this->played_cards += 1;
     this->spots[y][x] = c;
     Board::update_borders(x, y);
 }
@@ -112,10 +121,28 @@ void Board::set_card(Card *c, int x, int y) {
 // traverse row (from xs, ys to xe, ye with deltas dx and dy per step), returns true if connected 4
 bool Board::check_row(int player_id, int x, int y, int xs, int ys, int xe, int ye, int dx, int dy) {
     int streak = 0;
-    for (int xi = xs, yi = ys; xi <= xe && yi <= ye; yi += dy, xi += dx) {
-        (this->spots[yi][xi])->get_player_id() == player_id ? streak += 1 : streak = 0;
-        if (streak == 4)
+    int xi = xs, yi = ys;
+    bool final_round = false;
+    while (xi != xe || yi != ye || final_round) {
+        if ((this->spots[yi][xi])->get_player_id() == player_id) {
+            streak += 1;
+        } else {
+            streak = 0;
+        }
+        if (streak == 4) {
             return true;
+        }
+        xi += dx;
+        yi += dy;
+
+        // ends are inclusive (but can be approached from + or -)
+        // --> add final iteration manually
+        if (final_round) {
+            break;
+        }
+        if (xi == xe && yi == ye) {
+            final_round = true; 
+        }
     }
     return false;
 }
@@ -152,7 +179,9 @@ bool Board::check_winner(int player_id, int x, int y) {
     if (Board::check_row(player_id, x, y, xs, ys, xe, ye, 1, 0))
         return true;
 
+    // TODO: not working, fix it
     // bottom left to top right
+    // y_plus, -y_minus - 1, -1 : -x_minus, x_plus + 1, 1
     xs = x - x_minus;
     ys = y + y_plus;
     xe = x + x_plus;
@@ -164,12 +193,12 @@ bool Board::check_winner(int player_id, int x, int y) {
 }
 
 std::string Board::print() {
+    std::string pad = " ";
     std::string s = "    ";
-    std::string pad = "   ";
 
     // indices above board, mark indices outside border as black
     for (int xi = 0; xi < Board::max_x; xi++) {
-        if (xi >= this->ob_x_min && xi <= this->ob_x_max) {
+        if (xi >= this->ib_x_min && xi <= this->ib_x_max) {
             s += white(std::to_string(xi));
         } else {
             s += black(std::to_string(xi));
@@ -181,7 +210,7 @@ std::string Board::print() {
     for (int y = 0; y < Board::max_y; y++) {
 
         // indices next to board
-        if (y >= this->ob_x_min && y <= this->ob_x_max) {
+        if (y >= this->ib_y_min && y <= this->ib_y_max) {
             s += white(std::to_string(y));
         } else {
             s += black(std::to_string(y));

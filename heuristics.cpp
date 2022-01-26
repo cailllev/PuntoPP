@@ -1,10 +1,6 @@
 #include "heuristics.h"
-#include "board.h"
-#include "card.h"
-#include "game.h"
-#include <iostream>
 
-// TODO: refine
+// TODO: refine coefs
 const int H_WIN = 1000;
 const int H_IN_ROW = 10;
 
@@ -27,9 +23,9 @@ const int dirs[4][2]  = {
 };
 
 const int top_plays_first_round = 8;                   // how many top plays to inspect for first round
-const int top_n_plays_per_round[] = {3, 3, 1};         // how many top plays to inspect for following rounds
+const int top_n_plays_per_round[] = {4, 4, 4, 1};      // how many top plays to inspect for following rounds
 const double score_coef_per_round[] = {0.8, 0.6, 0.5}; // smaller rewards for future plays
-const int rounds_forward = 3;                          // length of top_n_plays_per_round
+const int rounds_forward = 4;                          // length of top_n_plays_per_round
 
 
 std::list<std::list<CardPos*>> get_lines_from_pos(Board *b, int x, int y, Borders *bo) {
@@ -40,31 +36,32 @@ std::list<std::list<CardPos*>> get_lines_from_pos(Board *b, int x, int y, Border
         int dx = dirs[d][1];
 
         // get each line of 4 cards in a given direction, i.e.:
-        //  x x x x . . .; . x x x x . .; . . x x x x .; . . . x x x x
-        // -3-2-1 0         -2-1 0 1         -1 0 1 2          0 1 2 3
+        //  x x x x . . .;    . x x x x . .;    . . x x x x .;    . . . x x x x
+        // -3-2-1 0 1 2 3    -3-2-1 0 1 2 3    -3-2-1 0 1 2 3    -3-2-1 0 1 2 3
         for (int s = -3; s <= 0; s++) {
             std::list<CardPos*> line = std::list<CardPos*>();
             for (int i = 0; i < 4; i++) {
                 int xi = x + (s + i) * dx;
                 int yi = y + (s + i) * dy;
-                if (xi >= bo->ob_x_min && xi <= bo->ob_x_max && yi >= bo->ob_y_min && yi <= bo->ob_y_max)
+                if (xi >= bo->ob_x_min && xi <= bo->ob_x_max && 
+                    yi >= bo->ob_y_min && yi <= bo->ob_y_max) {
                     line.push_back(new CardPos(xi, yi, b->get_card(xi, yi)));
+                }
             }
             // add line to lines if all 4 cards are in outer borders
-            if (line.size() == 4)
+            if (line.size() == 4) {
                 lines.push_back(line);
+            }
         }
     }
     return lines;
 }
 
-void sorted_insert(std::list<ScorePos*> *l, ScorePos *s, int count_spots) {
-    if (l->empty()) {
-        l->push_back(s);
-        return;
-    }
+bool sorted_insert(std::list<ScorePos*> *l, ScorePos *s, int count_spots) {
+    count_spots += 1; // do not count dummy node
 
-    int i = 0;
+    bool inserted = false;
+    int i = 0; 
     std::list<ScorePos*>::iterator it = l->begin();
 
     // advance pointer until at end of list; or new score > score at iterator; or score < top x scores
@@ -75,16 +72,15 @@ void sorted_insert(std::list<ScorePos*> *l, ScorePos *s, int count_spots) {
     // insert new score if in top count_spots
     if (i < count_spots) {
         l->insert(it, s);
+        inserted = true;
     }
 
     // remove last item if list is now too big
     if (l->size() > count_spots) {
         l->pop_back();
     }
-
-
+    return inserted;
 }
-
 
 std::list<ScorePos*> get_best_spots(Board *b, Card *c, int count_spots, Borders *bo) {
     int x_min = bo->ib_x_min;
@@ -108,7 +104,7 @@ std::list<ScorePos*> get_best_spots(Board *b, Card *c, int count_spots, Borders 
             int x = xi + x_min; // actual coord
 
             // mark invalid plays and continued
-            if (! (b->is_valid_play(c, x, y))) {
+            if (!b->is_valid_play(c, x, y)) {
                 scores[yi][xi] = H_INVALID_PLAY;
                 continue;
             }
@@ -177,33 +173,45 @@ std::list<ScorePos*> get_best_spots(Board *b, Card *c, int count_spots, Borders 
                 in_row[yi][xi] = cards_in_row;
                 scores[yi][xi] = score;
             }
+            lines.clear(); // delete lines
             
             // revert board
             b->set_card(original_card, x, y);
         }
     }
+    delete bo;
 
     std::list<ScorePos*> sorted_scores = std::list<ScorePos*>();
+    // insert dummy element, removes empty checks
+    sorted_scores.push_back(new ScorePos(-1, -1, -2147483648));
 
     // add in_row and score to complete score
     int score, cards_in_row;
     ScorePos *s;
     for (int yi = 0; yi <= y_diff; yi++) {
-        for (int xi = 0; xi < x_diff; xi++) {
+        for (int xi = 0; xi <= x_diff; xi++) {
             cards_in_row = in_row[yi][xi];
             score = H_TOTAL_SUM * scores[yi][xi] + H_IN_ROW * cards_in_row * cards_in_row;
-            s = new ScorePos(xi + x_min, yi + y_min, score); // add min to correct the offset
-            sorted_insert(&sorted_scores, s, count_spots);
+
+            // only create ScorePos obj if score should be inserted
+            if (score > sorted_scores.back()->score) {
+                s = new ScorePos(xi + x_min, yi + y_min, score); // add min to correct the offset
+                sorted_insert(&sorted_scores, s, count_spots);
+            }            
         }
     }
+    // remove trailing dummy node
+    sorted_scores.pop_back();
+
+    // no need to delete in_row and scores, see board.cpp line 30
     return sorted_scores;
 }
 
-
+// TODO, implement shallow pruning (see paper)
 void maximax_algo(AlgoData *a, Game *g) {
 
-    // when in leaf node: check if accumulated score > previous max of leafs, then store in results
-    if (a->current_round == rounds_forward) {
+    // when in leaf node: check if accumulated score > previous max of leafs
+    if (a->current_round >= rounds_forward) {
         if (a->added_score > a->max_score) {
             a->max_score = a->added_score;
         }
@@ -220,7 +228,7 @@ void maximax_algo(AlgoData *a, Game *g) {
             g->get_board(), avg_card, top_n_plays, g->get_board()->get_borders()
         );
 
-        a->current_round += 1 / g->get_players().size(); // increase current round
+        a->current_round += 1.0 / g->get_players().size(); // increase current round
 
         for(auto& s : scores) {
             // only change score on own player
@@ -235,27 +243,25 @@ void maximax_algo(AlgoData *a, Game *g) {
             // revert play
             g->get_board()->set_card(tmp_card, s->x, s->y);
         }
+        delete avg_card;
+        scores.clear(); // delete scores
     }
 
     // revert player
     g->previous_round();
 }
 
-
-// TODO: implement shallow pruning, correct and sanitycheck algo
-// minimax devolves to 1 v all in multiplayer settings
-//   -> use maximax (maximize for all players individually)
-Point * maximax(Game *g, Card *c) {
-    int me = (g->get_players().front())->get_id();
+Point * maximax(Game g, Card *c) {
+    int me = (g.get_players().front())->get_id();
 
     // get top n valid plays
     std::list<ScorePos*> original_plays = get_best_spots(
-        g->get_board(), c, top_plays_first_round, g->get_board()->get_borders()
+        g.get_board(), c, top_plays_first_round, g.get_board()->get_borders()
     );
 
     // calculate score of each play
     int i = 0;
-    double max_max_score = 0;
+    double max_max_score = -2147483648.0;
     int xm, ym;
 
     for (auto& play : original_plays) {
@@ -264,18 +270,20 @@ Point * maximax(Game *g, Card *c) {
         int score0 = play->score;
 
         AlgoData *a = new AlgoData(me, i++, 0.0, score0, 0);
-        Card *old_card = g->get_board()->get_card(x0, y0);
+        Card *old_card = g.get_board()->get_card(x0, y0);
 
-        g->get_board()->set_card(c, x0, y0);
-        maximax_algo(a, g);
-        g->get_board()->set_card(old_card, x0, y0);
+        g.get_board()->set_card(c, x0, y0);
+        maximax_algo(a, &g);
+        g.get_board()->set_card(old_card, x0, y0);
 
         if (a->max_score > max_max_score) {
             max_max_score = a->max_score;
             xm = x0;
             ym = y0;
         }
+        delete a;
     }
+    original_plays.clear(); // delete original_plays
 
     // return x,y of highest score
     return new Point(xm, ym);

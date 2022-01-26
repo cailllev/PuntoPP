@@ -1,23 +1,19 @@
-#include <random>
-#include <string>
-#include "card.h"
-#include "console.h"
 #include "player.h"
+#include "console.h"
+#include <iostream>
+#include <random>
 
 
 Player::Player(int id, std::string name) {
     player_id = id;
-    player_name = name;  
+    player_name = name;
 
-    /*
     std::random_device rand_dev;
     std::mt19937 generator(rand_dev());
-    */
 
     // create a shuffled list of cards (1, 1, 2, 2, 3, 3, ...)
     for (int j = 0; j < 2; j ++) {
-        for (int i = Card::min_val; i <= Card::max_val; ) {
-            /*
+        for (int i = Card::min_val; i <= Card::max_val; i++) {
             // create random position for new card
             std::uniform_int_distribution<int> distr(0, i + j*Card::max_val + 1);
             int pos = distr(generator);
@@ -27,10 +23,12 @@ Player::Player(int id, std::string name) {
             advance(it, pos);
 
             this->cards.insert(it, new Card(this->player_id, i));
-            */
-            this->cards.push_back(new Card(this->player_id, i));
         }
     }
+}
+
+Player::~Player() {
+    this->cards.clear(); // delete cards
 }
 
 int Player::get_id() { 
@@ -41,7 +39,7 @@ std::string Player::get_name() {
     return this->player_name; 
 }
 
-Card * Player::peek_next_card() { 
+Card * Player::peek_next_card() {
     return this->cards.front(); 
 }
 
@@ -66,6 +64,5 @@ int Player::get_cards_count() {
 }
 
 std::string Player::print() {
-    return to_colour[this->player_id](this->player_name) + " with a " 
-        + to_colour[this->player_id](std::to_string(this->peek_next_card()->get_value()));
+    return to_colour[this->player_id](this->player_name);
 }

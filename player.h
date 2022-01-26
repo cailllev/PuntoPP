@@ -1,8 +1,9 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include <list>
 #include "card.h"
+#include <list>
+#include <string>
 
 class Player {
     private:
@@ -12,7 +13,8 @@ class Player {
 
     public:
         Player(int id, std::string name);
-
+        ~Player();
+        
         int get_id();
         std::string get_name();
         Card* get_next_card();
