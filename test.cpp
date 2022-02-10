@@ -77,12 +77,15 @@ bool test_get_lines_from_pos() {
 bool test_get_best_spot() {
 	std::cout << "[*] test_get_best_spot\n";
 	bool ret = true;
+
+	int pid = 1;
+	Player *p = new Player(pid, "dummy");
 	Board *b = new Board();
-	Card *c1 = new Card(1, 1);
-	Card *c2 = new Card(1, 2);
-	Card *c3 = new Card(1, 3);
-	Card *c4 = new Card(1, 4);
-	Card *c5 = new Card(1, 5);
+	Card *c1 = new Card(pid, 1);
+	Card *c2 = new Card(pid, 2);
+	Card *c3 = new Card(pid, 3);
+	Card *c4 = new Card(pid, 4);
+	Card *c5 = new Card(pid, 5);
 
 	b->play_card_no_checks(c1, 5, 5); // first card
 	b->play_card(c2, 5, 4);
@@ -90,7 +93,7 @@ bool test_get_best_spot() {
 	b->play_card(c4, 5, 2);
 
 	// test top 4
-	std::list<ScorePos*> scores = get_best_spots(b, c5, 4, b->get_borders());
+	std::list<ScorePos*> scores = get_best_spots(b, b->get_borders(), c5, 4, 9);
 	ret = ret && (scores.size() == 4);
 
 	std::cout << "  [#] Board:\n" + b->print();
@@ -104,9 +107,11 @@ bool test_get_best_spot() {
 	ret = ret && (best->x == 5 && best->y == 3);
 
 	// test not more top spots than actual playing spots (24)
-	scores = get_best_spots(b, c5, 24, b->get_borders());
+	scores = get_best_spots(b, b->get_borders(), c5, 24, 9);
+	std::cout << "Here\n";
 	ret = ret && (scores.size() == 24);
-	scores = get_best_spots(b, c5, 25, b->get_borders());
+	scores = get_best_spots(b, b->get_borders(), c5, 25, 9);
+	std::cout << "Here\n";
 	ret = ret && (scores.size() == 24);
 
 	return ret;
@@ -117,6 +122,7 @@ bool test_maximax() {
 }
 
 bool tests() {
+	test_get_best_spot();
 	return (
 		test_init() &&
 		test_place_valid_card() &&

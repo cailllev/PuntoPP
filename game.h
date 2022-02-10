@@ -15,6 +15,7 @@ class Game {
 	public:
 		Game(std::list<std::string> names);
 		~Game();
+		Game(const Game &g1); // copy
 
 		void play_round();
 		Board * get_board();

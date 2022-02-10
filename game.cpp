@@ -18,6 +18,11 @@ Game::~Game() {
 	players.clear(); // delete players
 }
 
+Game::Game(const Game &g1) {
+	board = g1.board; 
+	players = g1.players;
+}
+
 void Game::play_round() {
 
 	// first round

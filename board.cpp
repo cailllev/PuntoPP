@@ -1,6 +1,5 @@
 #include "board.h"
 #include "console.h"
-#include <iostream>
 
 Board::Board() {
     // init all spots with null cards
@@ -25,12 +24,12 @@ Board::Board() {
 Board::~Board() {
     for (int y = 0; y < this->max_y; y++) {
         for (int x = 0; x < this->max_x; x++) {
-            delete this->spots[y][x]; // delete card
+            //delete this->spots[y][x]; // delete card
         }
     }
     // spots array is allocated automatically, not needed to delete manually
     // https://stackoverflow.com/questions/14513535/warning-deleting-array-in-load-file-function
-    delete this->null_card;
+    //delete this->null_card;
 }
 
 Card * Board::get_card(int x, int y) {
