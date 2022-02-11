@@ -70,5 +70,10 @@ int main(int argc, char * argv[]) {
 	    g.play_round();
     }
 
+  	else {
+  		std::cout << help();
+  		return 0;
+  	}
+
 	return 0;
 }
